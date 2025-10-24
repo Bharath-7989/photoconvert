@@ -1,0 +1,7 @@
+{
+  "name": "Copy of AI Headshot Photographer",
+  "description": "Upload a casual selfie, select a professional style, and let AI generate the perfect headshot for you. Also includes an AI-powered chatbot to answer your questions.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
