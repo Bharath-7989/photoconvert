@@ -61,4 +61,40 @@ export const HEADSHOT_STYLES: HeadshotStyle[] = [
     prompt: 'Generate a futuristic, high-fashion headshot bathed in neon light. The background should be dark, with vibrant streaks of electric blue, pink, and purple light creating a cyberpunk feel. The person should have a modern, edgy look, with attire that is sleek and stylish. The expression should be confident and intense, fitting the dynamic, high-tech mood.',
     previewUrl: 'https://picsum.photos/seed/futuristic/300/300',
   },
+  {
+    id: 'watercolor-portrait',
+    name: 'Watercolor Art',
+    prompt: 'Generate an artistic headshot in a soft, expressive watercolor painting style. The colors should be vibrant yet translucent, with visible brushstrokes and paper texture. The focus should be on the person\'s face, with the background being an abstract wash of complementary colors. The mood should be gentle, creative, and unique.',
+    previewUrl: 'https://picsum.photos/seed/watercolor/300/300',
+  },
+  {
+    id: 'low-poly',
+    name: 'Low Poly',
+    prompt: 'Generate a stylized headshot in a low-poly geometric art style. The person\'s face and features should be constructed from a mesh of colorful triangles and polygons. The lighting should create distinct facets of light and shadow, giving the portrait a modern, digital, and abstract feel.',
+    previewUrl: 'https://picsum.photos/seed/lowpoly/300/300',
+  },
+  {
+    id: 'gothic-noir',
+    name: 'Gothic Noir',
+    prompt: 'Generate a dramatic, atmospheric headshot in a gothic noir style. The image should be in high-contrast black and white, with deep shadows and selective highlights (chiaroscuro). The background should be dark and mysterious, perhaps suggesting a Victorian or moody urban setting. The expression should be intense and enigmatic.',
+    previewUrl: 'https://picsum.photos/seed/gothic/300/300',
+  },
+  {
+    id: 'pop-art',
+    name: 'Pop Art',
+    prompt: 'Generate a vibrant headshot in the style of 1960s Pop Art, reminiscent of Andy Warhol. The image should use bold, saturated, and unexpected colors for the skin and hair, with a distinct screen-printed look and halftone dots. The background should be a flat, bright, contrasting color. The expression should be bold and graphic.',
+    previewUrl: 'https://picsum.photos/seed/popart/300/300',
+  },
+  {
+    id: 'hollywood-glamour',
+    name: 'Hollywood Glamour',
+    prompt: 'Generate a glamorous black and white headshot in the style of Golden Age Hollywood cinema (1940s). The lighting should be soft and dramatic, with a subtle glow effect. The person should have a classic, elegant hairstyle and attire. The expression should be sophisticated and captivating, with a hint of mystery.',
+    previewUrl: 'https://picsum.photos/seed/hollywood/300/300',
+  },
+  {
+    id: 'cyberpunk-hacker',
+    name: 'Cyberpunk Hacker',
+    prompt: 'Generate a headshot in a cyberpunk aesthetic. The person should be illuminated by holographic data displays and neon city lights in shades of magenta, cyan, and electric blue. The background should be a dark, futuristic cityscape at night. The attire should be tech-infused, and the expression should be focused and cool, as if they are interfacing with a high-tech system.',
+    previewUrl: 'https://picsum.photos/seed/cyberpunk/300/300',
+  },
 ];
