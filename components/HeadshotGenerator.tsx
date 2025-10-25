@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useRef } from 'react';
+
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { HeadshotStyle, ImageFile } from '../types';
 import { generateHeadshot } from '../services/geminiService';
 import StyleSelector from './StyleSelector';
@@ -9,6 +10,8 @@ import { SparklesIcon } from './icons/SparklesIcon';
 import { CameraIcon } from './icons/CameraIcon';
 import { DownloadIcon } from './icons/DownloadIcon';
 import { CropIcon } from './icons/CropIcon';
+
+const DAILY_LIMIT = 20;
 
 const fileToImageFile = (file: File | Blob): Promise<ImageFile> => {
   return new Promise((resolve, reject) => {
@@ -32,12 +35,73 @@ const HeadshotGenerator: React.FC = () => {
   const [selectedStyle, setSelectedStyle] = useState<HeadshotStyle | null>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isCoolingDown, setIsCoolingDown] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isCameraOpen, setIsCameraOpen] = useState<boolean>(false);
   const [isCropping, setIsCropping] = useState<boolean>(false);
+  const [loadingMessage, setLoadingMessage] = useState<string>('Creating your professional look...');
+  const [userInput, setUserInput] = useState<string>('');
+  const [generationsLeft, setGenerationsLeft] = useState<number>(DAILY_LIMIT);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const checkDailyLimit = () => {
+      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      try {
+        const storedData = localStorage.getItem('headshotGenerationLimit');
+        if (storedData) {
+          const { date, count } = JSON.parse(storedData);
+          if (date === today) {
+            setGenerationsLeft(Math.max(0, DAILY_LIMIT - count));
+          } else {
+            localStorage.removeItem('headshotGenerationLimit');
+            setGenerationsLeft(DAILY_LIMIT);
+          }
+        } else {
+          setGenerationsLeft(DAILY_LIMIT);
+        }
+      } catch (e) {
+          console.error("Failed to parse daily limit from localStorage", e);
+          localStorage.removeItem('headshotGenerationLimit');
+          setGenerationsLeft(DAILY_LIMIT);
+      }
+    };
+    checkDailyLimit();
+  }, []);
+
+  useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval> | undefined;
+
+    if (isLoading) {
+      const messages = [
+        'Analyzing your facial structure...',
+        `Applying the "${selectedStyle?.name || 'selected'}" style...`,
+        'Adjusting lighting and shadows...',
+        'Enhancing details for a professional finish...',
+        'Finalizing your headshot...',
+      ];
+      let messageIndex = 0;
+      setLoadingMessage(messages[messageIndex]);
+
+      intervalId = setInterval(() => {
+        messageIndex = (messageIndex + 1) % messages.length;
+        setLoadingMessage(messages[messageIndex]);
+      }, 2500);
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [isLoading, selectedStyle?.name]);
+  
+  useEffect(() => {
+    setUserInput('');
+  }, [selectedStyle]);
+
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -124,22 +188,54 @@ const HeadshotGenerator: React.FC = () => {
       setError('Please upload a selfie and select a style.');
       return;
     }
+    if (selectedStyle.userInput && !userInput.trim()) {
+      setError(`Please provide the required text: "${selectedStyle.userInput.label}"`);
+      return;
+    }
+    if (generationsLeft <= 0) {
+      setError(`You have reached your daily generation limit of ${DAILY_LIMIT} headshots. Please try again tomorrow.`);
+      return;
+    }
     setError(null);
     setIsLoading(true);
     setGeneratedImage(null);
 
     try {
+      const today = new Date().toISOString().split('T')[0];
+      const storedData = localStorage.getItem('headshotGenerationLimit');
+      let currentCount = 0;
+      if (storedData) {
+        try {
+            const { date, count } = JSON.parse(storedData);
+            if (date === today) {
+                currentCount = count;
+            }
+        } catch (e) {
+             console.error("Failed to parse stored daily limit, resetting.", e);
+        }
+      }
+      const newCount = currentCount + 1;
+      localStorage.setItem('headshotGenerationLimit', JSON.stringify({ date: today, count: newCount }));
+      setGenerationsLeft(DAILY_LIMIT - newCount);
+
+      let finalPrompt = selectedStyle.prompt;
+      if (selectedStyle.userInput) {
+        finalPrompt = finalPrompt.replace('{{username}}', userInput.trim());
+      }
+      
       const result = await generateHeadshot(
         { data: uploadedImage.base64, mimeType: uploadedImage.mimeType },
-        selectedStyle.prompt
+        finalPrompt
       );
       setGeneratedImage(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred.');
     } finally {
       setIsLoading(false);
+      setIsCoolingDown(true);
+      setTimeout(() => setIsCoolingDown(false), 5000);
     }
-  }, [uploadedImage, selectedStyle]);
+  }, [uploadedImage, selectedStyle, userInput, generationsLeft]);
 
   const handleDownload = () => {
     if (!generatedImage) return;
@@ -214,32 +310,60 @@ const HeadshotGenerator: React.FC = () => {
           </div>
           <StyleSelector selectedStyleId={selectedStyle?.id || null} onSelectStyle={setSelectedStyle} />
 
-          <button
-            onClick={handleGenerateClick}
-            disabled={!uploadedImage || !selectedStyle || isLoading}
-            className="w-full flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-secondary disabled:bg-base-300 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105"
-          >
-            {isLoading ? (
-              <>
-                <Spinner className="w-5 h-5" />
-                <span>Generating...</span>
-              </>
-            ) : (
-              <>
-                <SparklesIcon className="w-5 h-5" />
-                <span>Generate Headshot</span>
-              </>
-            )}
-          </button>
+          {selectedStyle?.userInput && (
+            <div className="animate-fade-in">
+              <h3 className="text-lg font-semibold text-white mb-4">3. Customize</h3>
+              <label htmlFor="user-input" className="block text-sm font-medium text-gray-300 mb-2">
+                {selectedStyle.userInput.label}
+              </label>
+              <input
+                id="user-input"
+                type="text"
+                value={userInput}
+                onChange={(e) => setUserInput(e.target.value)}
+                placeholder={selectedStyle.userInput.placeholder}
+                className="w-full bg-base-300 border border-base-100 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-brand-primary transition-colors"
+                aria-required="true"
+              />
+            </div>
+          )}
+          <div className="space-y-3">
+            <button
+              onClick={handleGenerateClick}
+              disabled={!uploadedImage || !selectedStyle || isLoading || isCoolingDown || (selectedStyle?.userInput && !userInput.trim()) || generationsLeft <= 0}
+              className="w-full flex items-center justify-center gap-2 bg-brand-primary hover:bg-brand-secondary disabled:bg-base-300 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105"
+            >
+              {isLoading ? (
+                <>
+                  <Spinner className="w-5 h-5" />
+                  <span>Generating...</span>
+                </>
+              ) : isCoolingDown ? (
+                <span>Please wait...</span>
+              ) : (
+                <>
+                  <SparklesIcon className="w-5 h-5" />
+                  <span>Generate Headshot</span>
+                </>
+              )}
+            </button>
+            <div className="text-center text-sm text-gray-400">
+             {generationsLeft > 0 ? (
+               <p>You have {generationsLeft} generation{generationsLeft !== 1 ? 's' : ''} left today.</p>
+             ) : (
+               <p className="font-semibold text-amber-400">Daily limit reached. Resets tomorrow.</p>
+             )}
+            </div>
+          </div>
         </div>
 
         <div className="bg-base-200 p-6 rounded-lg flex flex-col items-center justify-center min-h-[300px]">
           <h3 className="text-lg font-semibold text-white mb-4">Your AI Headshot</h3>
           <div className="w-full aspect-square bg-base-100 rounded-lg flex items-center justify-center relative">
             {isLoading && (
-              <div className="flex flex-col items-center gap-4 text-gray-400 animate-pulse-fast">
+              <div className="flex flex-col items-center gap-4 text-gray-400 text-center px-4 animate-fade-in">
                 <Spinner className="w-16 h-16" />
-                <p>Creating your professional look...</p>
+                <p className="transition-all duration-300">{loadingMessage}</p>
               </div>
             )}
             {error && <p className="text-red-400 p-4 text-center">{error}</p>}

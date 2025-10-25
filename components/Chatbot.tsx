@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { getChatResponse } from '../services/geminiService';
 import { ChatMessage } from '../types';
@@ -8,6 +7,7 @@ const Chatbot: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [thinkingDots, setThinkingDots] = useState<string>('.');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -17,6 +17,24 @@ const Chatbot: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval> | undefined;
+    if (isLoading) {
+      intervalId = setInterval(() => {
+        setThinkingDots((dots) => {
+          if (dots.length >= 3) return '.';
+          return dots + '.';
+        });
+      }, 400);
+    }
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+      setThinkingDots('.'); // Reset
+    };
+  }, [isLoading]);
   
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,7 +103,7 @@ const Chatbot: React.FC = () => {
           <div className="flex justify-start">
              <div className="bg-base-300 text-gray-200 rounded-2xl rounded-bl-none px-4 py-3 inline-flex items-center gap-2">
                 <Spinner className="w-5 h-5" />
-                <span>Thinking...</span>
+                <span style={{ minWidth: '75px', textAlign: 'left' }}>Thinking{thinkingDots}</span>
              </div>
           </div>
         )}

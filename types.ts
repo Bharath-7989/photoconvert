@@ -3,6 +3,10 @@ export interface HeadshotStyle {
   name: string;
   prompt: string;
   previewUrl: string;
+  userInput?: {
+    label: string;
+    placeholder: string;
+  };
 }
 
 export interface ChatMessage {
